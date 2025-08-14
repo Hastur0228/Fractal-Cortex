@@ -20,6 +20,15 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+# 中文说明:
+# 本文件负责把控件实例化并布局到 GUI，维护切片相关全局状态、处理用户交互（打开 STL、参数修改、模式切换）、触发切片/导出 GCode 等。
+# - 重要函数：
+#   - initialize_all_widgets：初始化/布局所有控件。
+#   - toggle_*：响应模式与设置切换并刷新界面。
+#   - slice_function：读取当前参数并调用 3 轴/5 轴切片。
+#   - save_gcode_as：导出 GCode。
+# - 全局参数：喷嘴温度、层高、速度、回抽、壳厚、填充率、5 轴切片方向等，均与 UI 双向绑定。
+
 import pyglet
 from pyglet import event
 from pyglet.window import key
@@ -376,6 +385,7 @@ def set_sliceFlag(args):
     sliceButtonDeck.get_widget("B_slice").sliceFlag = True
 
 def slice_function(meshData):
+    """中文说明：读取当前 UI 参数并根据模式调用 3 轴或 5 轴切片，切片完成后刷新预览状态。"""
     global \
         printSettings, \
         transform3DList, \
@@ -434,6 +444,7 @@ def slice_function(meshData):
         R_viewMode.set_disabled(False)
 
 def save_gcode_as(fileName):
+    """中文说明：弹出保存对话框并根据当前模式写出 3 轴或 5 轴 G-code。"""
     global \
         printSettings, \
         transform3DList, \
@@ -986,7 +997,8 @@ def enable_5_axis_mode():
     cycle_decks(0, 0)
 
 def initialize_all_widgets(gui, windowHeight):
-    """CONTAINER WIDGETS"""
+    """CONTAINER WIDGETS
+    中文说明：把各区域容器与控件插入并布局到 GUI 树中，初始化默认模式为 5 轴起始界面。"""
     # Entire window
     gui.add(baseGrid)
     baseGrid.clear()

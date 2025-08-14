@@ -20,6 +20,13 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+# 中文说明:
+# 本文件实现 3 轴与 5 轴切片算法，依赖 shapely/trimesh：
+# - 分层截面获取、外壳偏置（shell）、流形区域判定（100% 填充）、内部填充路径生成与优化（最近邻）、以及 2D→3D 变换以便渲染/导出 GCode。
+# - 3 轴流程：截面→壳→流形/内部区域→内部/实心填充→粘附结构（Brim）。
+# - 5 轴流程：根据用户定义的切片平面把模型分块（chunk），逐块重复 3 轴流程，并进行床/喷嘴碰撞校验与坐标变换。
+# - 性能：大量步骤使用并行进程池加速；少数跨层依赖步骤串行执行。
+
 import trimesh
 from trimesh import load_path
 import numpy as np
@@ -58,12 +65,14 @@ buildRadius = 150.0  # mm
 def slicing_function(mesh, z):
     """Obtains Trimesh section at a single layer.
         Since this function is only used in 3-axis mode, the slicing direction will always be normal to the build plate.
-        The only input that changes is the z-height, which is where each cross section of the STL is taken."""
+        The only input that changes is the z-height, which is where each cross section of the STL is taken.
+        中文说明：3 轴模式单层截面，法向固定为 Z 轴正向；z 为层中心高度。"""
     output = mesh.section_multiplane(plane_normal=[0, 0, 1], plane_origin=[0, 0, z], heights=[0])
     return output[0]
 
 def slicing_function_5_axis(mesh, normal, start, z):
-    """Obtains Trimesh section at a single layer"""
+    """Obtains Trimesh section at a single layer
+    中文说明：5 轴模式单层截面，法向为任意 normal，平面通过 start 点；heights 为相对偏置。"""
     output = mesh.section_multiplane(plane_normal=normal, plane_origin=start, heights=[z])
     return output[0]
 
@@ -79,7 +88,8 @@ def apply_slicing_function_5_axis(args):
 
 
 def get_initial_shells_for_one_layer(shapely_polygons, lineWidth):
-    """Obtains shapely outer shell polygons, taking into account insetting the shell by half the lineWidth"""
+    """Obtains shapely outer shell polygons, taking into account insetting the shell by half the lineWidth
+    中文说明：对每层的多边形做半线宽的向内偏置，保证打印线外边沿与几何外轮廓对齐。"""
     initialShellPolygons = []
     shellPolyList = []
     for poly in shapely_polygons:  # Start with polygons from the mesh that have no offset
@@ -91,7 +101,8 @@ def get_initial_shells_for_one_layer(shapely_polygons, lineWidth):
 
 
 def get_remaining_shells_for_one_layer(shellPolyList, lineWidth, shellThickness):
-    """Obtains any remaining inner shells and also returns innerMostPolygons"""
+    """Obtains any remaining inner shells and also returns innerMostPolygons
+    中文说明：迭代做向内偏置，生成剩余壳线，并返回最内侧的多边形（用于后续填充区域计算）。"""
     volatilePolyList = []
     if shellThickness > 1:
         for shell in range(shellThickness - 1):                                     # For the remaining shells that need to be defined:
@@ -135,7 +146,8 @@ def get_shell_rings_for_one_layer(shellPolyList):
 
 
 def get_shells_for_one_layer(shapely_polygons, lineWidth, shellThickness):
-    """Obtains innerMostPolygons and shellRingsList."""
+    """Obtains innerMostPolygons and shellRingsList.
+    中文说明：生成所有壳线并提取 LinearRing 列表，同时返回最内侧多边形集合。"""
     shellPolyList = get_initial_shells_for_one_layer(shapely_polygons, lineWidth)                                   # Obtain the outer wall shells of the part, taking into account the lineWidth
     shellPolyList, innerMostPolygons = get_remaining_shells_for_one_layer(shellPolyList, lineWidth, shellThickness) # Obtain any remaining inner shells of the part as well as defining the innerMostPolygons, which will be used for infill calculations later
     shellRingsList = get_shell_rings_for_one_layer(shellPolyList)                                                   # Converts the shell polygons list into a list of linearrings, the coordinates of which can be translated easily into GCode later
@@ -242,12 +254,17 @@ def get_manifold_areas_for_one_chunk(innerMostPolygonsList, infillPercentage, sh
         A manifold area is any area that needs 100% infill.
         If the user specifies any infill percentage less than 100%, the manifold area for each layer is defined as any exposed areas of the innerMostPolygons for that layer (overhangs or underhangs).
         In the above case, these areas are entirely filled in and solid, thus making the outer surface of the part "manifold" (watertight).
-        If the user specifies 100% infill, the manifold area for each layer is simply equal to the area defined by all innerMostPolygons for that layer."""
+        If the user specifies 100% infill, the manifold area for each layer is simply equal to the area defined by all innerMostPolygons for that layer.
+        中文说明：
+        - 计算“流形区域（需 100% 填充）”与“内部区域（按 infill%）”。
+        - 通过相邻层的重叠/差集判断上下表面暴露区，并在局部按壳厚进行“加厚”。
+        - infill=100% 时，当前层所有 innerMostPolygons 直接为流形区域。"""
 
     def build_up_exposed_layers(exposedLayer, layerOverlapArea):
         """Internally thickens the shell of the part in locations where the top or bottom of a layer is exposed.
             The exposed layer is either the current layer or the layer above the current layer (the upper layer).
-            The layerOverlapArea is either the area exposed on the underside of the upper layer or the area exposed on the top of the current layer."""
+            The layerOverlapArea is either the area exposed on the underside of the upper layer or the area exposed on the top of the current layer.
+            中文说明：沿着暴露的层表面向内逐层扩展，保证外表面局部达到壳厚层数。"""
         
         if exposedLayer == "Current_Layer":
             sign = -1
@@ -392,7 +409,8 @@ def get_manifold_areas_for_one_chunk(innerMostPolygonsList, infillPercentage, sh
 
 def define_alternating_infill_hatches_once(buildRadius, lineWidth):
     """Defines hatch lines that alternate +45/-45 degrees every layer.
-        Used for areas with 100% infill as well as the otherwise exposed top and bottom areas of parts."""
+        Used for areas with 100% infill as well as the otherwise exposed top and bottom areas of parts.
+        中文说明：为流形/顶底面定义交替 45° 的填充栅格，偶数层 +45°，奇数层 -45°。"""
     buildRadius = float(buildRadius)                                        # Radius of build plate
     definedSpacing = lineWidth
     Ypositive = np.arange(definedSpacing, buildRadius, definedSpacing)
@@ -439,7 +457,8 @@ def apply_get_solid_infill_for_one_layer_function(args):
 def define_monolithic_infill_hatch_once(infillType, buildRadius, lineWidth, infillPercentage):
     """Defines the infill hatch once for infills that don't change their pattern in the Z-direction.
         This way, time doesn't need to be spent redefining the infill shape on every layer.
-        Triangular infill is currently the only option."""
+        Triangular infill is currently the only option.
+        中文说明：单一（随 Z 不变）内部填充图案的全局定义，目前实现三角填充（0/60/120° 三向）。"""
     buildRadius = float(buildRadius)                            # Radius of build plate
     if infillPercentage <= 0.0 or infillPercentage >= 1.0:      # Don't define an infill pattern unless the user-specified infill % is greater than 0 and less than 100
         buildAreaHatch = None
@@ -545,7 +564,8 @@ def get_infill_start_locations_for_one_chunk(allLayerInfills_lineStrings, finalS
 
 def optimize_infill_paths_for_one_layer(firstLineIndex, firstLine, firstLineStartPoint, infillLineStrings):
     """Returns a list of infill paths in an optimized order based on a nearest neighbors approach.
-        infillLineStrings must be a list of LineStrings."""
+        infillLineStrings must be a list of LineStrings.
+        中文说明：使用“最近邻”启发式规划每层内部/实心填充线段顺序，减少空走。"""
     
     firstLineEndPoint = list(firstLine.coords)
     firstLineEndPoint.remove(firstLineStartPoint)
@@ -635,7 +655,8 @@ def apply_get_3D_paths_for_one_layer_function(args):
 
 
 def all_calculations(mesh, printSettings):
-    """Contains all 3-Axis slicing calculations done before plotting"""
+    """Contains all 3-Axis slicing calculations done before plotting
+    中文说明：3 轴切片主流程（并行：截面/壳/填充；串行：跨层区域判断），返回绘制与导出所需的数据结构。"""
 
     # First, retrieve print settings
     nozzleTemp = float(printSettings[0])
@@ -751,7 +772,8 @@ def all_calculations(mesh, printSettings):
 
 def all_5_axis_calculations(mesh, printSettings, slicingDirections):
     global slice_levels
-    """Contains all 5-axis slicing calculations done before plotting"""
+    """Contains all 5-axis slicing calculations done before plotting
+    中文说明：5 轴切片主流程：分块（差集防碰撞）→ 按块分层→ 截面/壳/区域→ 填充→ 粘附；并进行床-喷嘴碰撞检查与路径变换。"""
 
     # Collecting standard print settings
     nozzleTemp = float(printSettings[0])
@@ -1055,6 +1077,7 @@ def export_mesh(importedMesh):  # Export the meshes as a dictionary
 
 
 def slice_in_3_axes(printSettings, meshData):
+    """中文说明：3 轴切片入口；合并多 STL、确定层高/层位后调用 all_calculations 返回渲染/导出所需数据。"""
     global mesh, slice_levels, layerNumbers
 
     layerHeight = float(printSettings[6])
@@ -1096,6 +1119,7 @@ def slice_in_3_axes(printSettings, meshData):
     return transform3DList, adhesionList, shellRingsListList, optimizedInternalInfills, optimizedSolidInfills
 
 def slice_in_5_axes(printSettings, meshData, slicingDirections):
+    """中文说明：5 轴切片入口；根据用户定义的切片平面（数量/起点/方向）分块并逐块执行切片流程。"""
     global mesh, slice_levels, layerNumbers
     
     # Getting some variables
@@ -1122,6 +1146,7 @@ def slice_in_5_axes(printSettings, meshData, slicingDirections):
 
 
 def write_5_axis_gcode(newFile, savedFileName, printSettings, startingPositions, directions, chunk_transform3DList, adhesionList, chunk_shellRingsListList, chunk_optimizedInternalInfills, chunk_optimizedSolidInfills):
+    """中文说明：根据 5 轴切片结果生成 Klipper 方言 G-code；包含 A/B 轴同步、层速/行程速、回抽/Z-hop、粘附/壳/填充顺序等。"""
 
     def transcribe_pathPoints_to_gcode(pathPoints, PRINT_FEEDRATE, runOnce, newChunk):
         global E, previousE
@@ -1490,6 +1515,7 @@ def write_5_axis_gcode(newFile, savedFileName, printSettings, startingPositions,
 
 
 def write_3_axis_gcode(newFile, savedFileName, printSettings, transform3DList, adhesionList, shellRingsListList, optimizedInternalInfills, optimizedSolidInfills):
+    """中文说明：根据 3 轴切片结果生成 Klipper 方言 G-code；处理初层/名义层速、回抽与 Z-hop、粘附/壳/填充写入顺序等。"""
     
     def transcribe_pathPoints_to_gcode(pathPoints, PRINT_FEEDRATE, runOnce):
         global E, previousE

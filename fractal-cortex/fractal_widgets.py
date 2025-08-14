@@ -20,6 +20,11 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+# 中文说明:
+# 本文件定义 GUI 组件（基于 glooey/pyglet）的可复用控件：
+# - 装饰/背景、标签、单选/复选/按钮、带单位的输入框、下拉菜单、图像按钮等。
+# - 这些控件被 `widget_functions.py` 组合成完整界面。
+
 import pyglet
 from pyglet import event
 from pyglet.window import key
@@ -90,6 +95,7 @@ class Gray_Underline_Frame(glooey.Frame):  # This is the background rectangle fo
 """ SPIN BOX CLASSES """
 
 class Spin_Box(glooey.Widget):
+    """中文说明：带单位的数值微调组件，支持上/下按钮与直接编辑，限制最小/最大值与数据类型。"""
     custom_alignment = "center"
 
     def __init__(
@@ -1157,6 +1163,7 @@ class Disableable_Unlabeled_Image_Button(glooey.Button):
 """ NEWLY REVISED ENTRY BOX CLASSES """
 
 class Entry_Box(glooey.Stack):
+    """中文说明：通用数值输入框组件，包含背景/可编辑文本/单位标签，支持禁用态与数值边界。"""
     def __init__(self, defaultValue, minValue, maxValue, units):
         super().__init__()
         self.defaultValue = defaultValue

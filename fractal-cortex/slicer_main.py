@@ -20,6 +20,23 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+# 中文说明:
+# - 本文件负责创建 pyglet 窗口、载入/渲染 STL、交互（旋转/平移/缩放）、以及多线程切片任务调度。
+# - 关键类：
+#   - Camera：相机参数与交互灵敏度。
+#   - CalculationWorker：以线程池异步执行切片计算，并通过队列把结果回传到主线程。
+#   - Graphics_Window：主窗口与渲染循环，管理 GUI 组件与用户输入。
+#   - Render_Model：把 trimesh 网格上传为 OpenGL VBO 并绘制。
+#   - Render_Preview：把切片得到的路径转换为 VBO 并绘制预览。
+#   - Render_SlicePlanes：根据用户输入生成可视化切片平面。
+#   - User_Interaction：鼠标射线拾取与平面交点计算。
+# - 重要交互：
+#   - CTRL+A 全选、CTRL+Z 撤销、鼠标左键拖动平移、右键旋转、中键平移、滚轮缩放。
+# - 线程模型：
+#   - GUI 主线程仅做渲染与事件；切片计算在 CalculationWorker 线程池执行，通过 result_queue 回主线程更新 UI。
+# - 注意：
+#   - 预览模式下禁止几何体交互；切片进行时禁用设置避免状态竞争。
+
 import threading
 import queue
 from concurrent.futures import ThreadPoolExecutor
@@ -48,6 +65,7 @@ from widget_functions import *
 
 """
 Contains all the logic and processes required to run the interactive graphics window.
+中文说明：本模块实现交互式图形窗口的所有流程，包括相机/渲染、STL 管理、用户交互、切片任务多线程调度与结果回传。
 """
 
 # Global variable
@@ -55,6 +73,7 @@ L_loadedIndices = []  # List of indices that have already been loaded
 
 """ Camera Class """
 class Camera:  # Sets initial camera instance variables
+    """中文说明：保存相机位置/角度与灵敏度设置，供交互与渲染使用。"""
     def __init__(self):
         self.cameraDistance = 350.0
         self.cameraAngleX = 0.0
@@ -67,6 +86,7 @@ class Camera:  # Sets initial camera instance variables
 
 """ Calculation Worker Class """
 class CalculationWorker: # Used for Multithreading
+    """中文说明：以线程池异步执行切片等计算任务；通过队列传入任务并回传结果到主线程。"""
     def __init__(self):
         self.task_queue = queue.Queue()                         # Stores tasks to be processed
         self.result_queue = queue.Queue()                       # Stores completed results
@@ -108,6 +128,7 @@ class CalculationWorker: # Used for Multithreading
 
 """ Graphics_Window Class """
 class Graphics_Window(pyglet.window.Window):  # Custom pyglet window which contains everything (both the 3D interactive viewport and the widget foreground)
+    """中文说明：主窗口，负责渲染 3D 视图与 GUI，处理输入事件，并调度切片任务。"""
     # Initialize Class Variables:
     D_finalPositions = {}
     D_finalRotations = {}
@@ -1232,6 +1253,7 @@ class Graphics_Window(pyglet.window.Window):  # Custom pyglet window which conta
 
 """ Render_Model Class """
 class Render_Model:
+    """中文说明：管理 STL 网格上传为 OpenGL VBO 并绘制；按选择状态设置颜色、缩放/旋转/平移。"""
     # Class variables:
     D_stlVbos = {}
     D_stlDepths = {}
@@ -1362,6 +1384,7 @@ class Render_Model:
 
 """ Render_Preview Class"""
 class Render_Preview:
+    """中文说明：将切片得到的 2D/3D 线段转换为 VBO 并按颜色分组绘制预览路径。"""
     def __init__(self):
         self.path_vbos = {}  # Dictionary to store VBOs for different paths
 
@@ -1427,6 +1450,7 @@ class Render_Preview:
         glBindBuffer(GL_ARRAY_BUFFER, 0)
 
 class Render_SlicePlanes:
+    """中文说明：根据起点与方向（θ/φ）生成圆盘切片平面用于可视化；支持渐变配色与 VBO 复用/清理。"""
     def __init__(self):
         self.current_vbo = None
         self.colors = self.generate_biv_gradient(20) # Create 20 separate RGB values
@@ -1538,6 +1562,7 @@ class Render_SlicePlanes:
 
 """ User_Interaction Class """
 class User_Interaction:
+    """中文说明：处理鼠标射线与网格/平面相交计算，用于拾取与拖拽平移。"""
     def __init__(self):
         pass
 
