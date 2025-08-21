@@ -1,0 +1,6 @@
+numpy
+shapely
+trimesh
+pyglet
+glooey
+matplotlib
