@@ -46,8 +46,33 @@ Contains all functions that are triggered upon interacting with widgets.
 """
 
 # Adding a custom font
-pyglet.font.add_file("Roboto-Regular.ttf")
-pyglet.font.load("Roboto")
+import os
+import sys
+
+# Get the base path for the application
+if getattr(sys, 'frozen', False):
+    # Running as compiled executable
+    base_path = sys._MEIPASS
+else:
+    # Running as script
+    base_path = os.path.dirname(os.path.abspath(__file__))
+
+# 延迟字体加载，避免在模块导入时创建GUI窗口
+def load_fonts():
+    """延迟加载字体，避免在模块导入时创建GUI窗口"""
+    try:
+        font_path = os.path.join(base_path, "Roboto-Regular.ttf")
+        pyglet.font.add_file(font_path)
+        pyglet.font.load("Roboto")
+    except Exception as e:
+        # 静默处理字体加载错误，避免影响程序启动
+        pass
+
+def resource_path(relative_path):
+    """打包后资源路径兼容"""
+    if hasattr(sys, "_MEIPASS"):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
 
 """ GLOBAL VARIABLES """
 # Geometry Action Variables
@@ -1095,26 +1120,26 @@ lowerSettingsStack = glooey.Stack()
 
 # WIDGETS
 # Rotate Mode Radio Button Variables
-rotateModeBackground = "image_resources/rotateMode_Radio_Button_Images/background.png"
+rotateModeBackground = resource_path("image_resources/rotateMode_Radio_Button_Images/background.png")
 rotateModeNames = ["X", "Y", "Z"]
 rotateModeImages = [
     [
-        "image_resources/rotateMode_Radio_Button_Images/x/R_uncheckedBase.png",
-        "image_resources/rotateMode_Radio_Button_Images/x/R_uncheckedOver.png",
-        "image_resources/rotateMode_Radio_Button_Images/x/R_uncheckedDown.png",
-        "image_resources/rotateMode_Radio_Button_Images/x/R_checked.png",
+        resource_path("image_resources/rotateMode_Radio_Button_Images/x/R_uncheckedBase.png"),
+        resource_path("image_resources/rotateMode_Radio_Button_Images/x/R_uncheckedOver.png"),
+        resource_path("image_resources/rotateMode_Radio_Button_Images/x/R_uncheckedDown.png"),
+        resource_path("image_resources/rotateMode_Radio_Button_Images/x/R_checked.png"),
     ],
     [
-        "image_resources/rotateMode_Radio_Button_Images/y/R_uncheckedBase.png",
-        "image_resources/rotateMode_Radio_Button_Images/y/R_uncheckedOver.png",
-        "image_resources/rotateMode_Radio_Button_Images/y/R_uncheckedDown.png",
-        "image_resources/rotateMode_Radio_Button_Images/y/R_checked.png",
+        resource_path("image_resources/rotateMode_Radio_Button_Images/y/R_uncheckedBase.png"),
+        resource_path("image_resources/rotateMode_Radio_Button_Images/y/R_uncheckedOver.png"),
+        resource_path("image_resources/rotateMode_Radio_Button_Images/y/R_uncheckedDown.png"),
+        resource_path("image_resources/rotateMode_Radio_Button_Images/y/R_checked.png"),
     ],
     [
-        "image_resources/rotateMode_Radio_Button_Images/z/R_uncheckedBase.png",
-        "image_resources/rotateMode_Radio_Button_Images/z/R_uncheckedOver.png",
-        "image_resources/rotateMode_Radio_Button_Images/z/R_uncheckedDown.png",
-        "image_resources/rotateMode_Radio_Button_Images/z/R_checked.png",
+        resource_path("image_resources/rotateMode_Radio_Button_Images/z/R_uncheckedBase.png"),
+        resource_path("image_resources/rotateMode_Radio_Button_Images/z/R_uncheckedOver.png"),
+        resource_path("image_resources/rotateMode_Radio_Button_Images/z/R_uncheckedDown.png"),
+        resource_path("image_resources/rotateMode_Radio_Button_Images/z/R_checked.png"),
     ],
 ]
 
@@ -1123,9 +1148,9 @@ rotateModeDefaultIndex = 0
 geometryActionBackgroundDeck = glooey.Deck(
     "deactivated",
     deactivated=Widget_Label(""),
-    base=Custom_Image("image_resources/geometryActionPopUpBox_Images/background.png"),
+    base=Custom_Image(resource_path("image_resources/geometryActionPopUpBox_Images/background.png")),
     scale=Custom_Image(
-        "image_resources/geometryActionPopUpBox_Images/scaleBackground.png"
+        resource_path("image_resources/geometryActionPopUpBox_Images/scaleBackground.png")
     ),
 )
 geometryActionBackgroundState = "deactivated"
@@ -1181,9 +1206,9 @@ r3c1GeometryActionDeck = glooey.Deck(
     ),
     rotate=Entry_Box(str(rotateY), rotateBounds[0], rotateBounds[1], "°CCW"),
     scale=Unlabeled_Image_Button(
-        "image_resources/apply_Button_Images/Base.png",
-        "image_resources/apply_Button_Images/Over.png",
-        "image_resources/apply_Button_Images/Down.png",
+        resource_path("image_resources/apply_Button_Images/base.png"),
+        resource_path("image_resources/apply_Button_Images/over.png"),
+        resource_path("image_resources/apply_Button_Images/down.png"),
         apply_placeholder,
         [],
     ),
@@ -1200,9 +1225,9 @@ r4c1GeometryActionDeck = glooey.Deck(
     blank=Widget_Label(""),
     translate=Entry_Box(str(translateZ), zBounds[0], zBounds[1], "mm"),
     rotate=Unlabeled_Image_Button(
-        "image_resources/apply_Button_Images/Base.png",
-        "image_resources/apply_Button_Images/Over.png",
-        "image_resources/apply_Button_Images/Down.png",
+        resource_path("image_resources/apply_Button_Images/base.png"),
+        resource_path("image_resources/apply_Button_Images/over.png"),
+        resource_path("image_resources/apply_Button_Images/down.png"),
         apply_placeholder,
         [],
     ),
@@ -1210,26 +1235,26 @@ r4c1GeometryActionDeck = glooey.Deck(
 )
 
 # Print Mode Radio Button Variables
-printModeBackground = "image_resources/printMode_Radio_Button_Images/background.png"
+printModeBackground = resource_path("image_resources/printMode_Radio_Button_Images/background.png")
 printModeNames = ["5-Axis Mode", "3-Axis Mode"]
 printModeImages = [
     [
-        "image_resources/printMode_Radio_Button_Images/5AxisMode/R_uncheckedBase.png",
-        "image_resources/printMode_Radio_Button_Images/5AxisMode/R_uncheckedOver.png",
-        "image_resources/printMode_Radio_Button_Images/5AxisMode/R_uncheckedDown.png",
-        "image_resources/printMode_Radio_Button_Images/5AxisMode/R_checked.png",
+        resource_path("image_resources/printMode_Radio_Button_Images/5AxisMode/R_uncheckedBase.png"),
+        resource_path("image_resources/printMode_Radio_Button_Images/5AxisMode/R_uncheckedOver.png"),
+        resource_path("image_resources/printMode_Radio_Button_Images/5AxisMode/R_uncheckedDown.png"),
+        resource_path("image_resources/printMode_Radio_Button_Images/5AxisMode/R_checked.png"),
     ],
     [
-        "image_resources/printMode_Radio_Button_Images/3AxisMode/R_uncheckedBase.png",
-        "image_resources/printMode_Radio_Button_Images/3AxisMode/R_uncheckedOver.png",
-        "image_resources/printMode_Radio_Button_Images/3AxisMode/R_uncheckedDown.png",
-        "image_resources/printMode_Radio_Button_Images/3AxisMode/R_checked.png",
+        resource_path("image_resources/printMode_Radio_Button_Images/3AxisMode/R_uncheckedBase.png"),
+        resource_path("image_resources/printMode_Radio_Button_Images/3AxisMode/R_uncheckedOver.png"),
+        resource_path("image_resources/printMode_Radio_Button_Images/3AxisMode/R_uncheckedDown.png"),
+        resource_path("image_resources/printMode_Radio_Button_Images/3AxisMode/R_checked.png"),
     ],
 ]
 
 printModeDefaultIndex = 0
 # Option Mode Radio Button Variables
-optionModeBackground = "image_resources/optionMode_Radio_Button_Images/background.png"
+optionModeBackground = resource_path("image_resources/optionMode_Radio_Button_Images/background.png")
 optionModeNames = [
     "Material",
     "Strength",
@@ -1240,85 +1265,85 @@ optionModeNames = [
 ]
 optionModeImages = [
     [
-        "image_resources/optionMode_Radio_Button_Images/material/R_uncheckedBase.png",
-        "image_resources/optionMode_Radio_Button_Images/material/R_uncheckedOver.png",
-        "image_resources/optionMode_Radio_Button_Images/material/R_uncheckedDown.png",
-        "image_resources/optionMode_Radio_Button_Images/material/R_checked.png",
+        resource_path("image_resources/optionMode_Radio_Button_Images/material/R_uncheckedBase.png"),
+        resource_path("image_resources/optionMode_Radio_Button_Images/material/R_uncheckedOver.png"),
+        resource_path("image_resources/optionMode_Radio_Button_Images/material/R_uncheckedDown.png"),
+        resource_path("image_resources/optionMode_Radio_Button_Images/material/R_checked.png"),
     ],
     [
-        "image_resources/optionMode_Radio_Button_Images/strength/R_uncheckedBase.png",
-        "image_resources/optionMode_Radio_Button_Images/strength/R_uncheckedOver.png",
-        "image_resources/optionMode_Radio_Button_Images/strength/R_uncheckedDown.png",
-        "image_resources/optionMode_Radio_Button_Images/strength/R_checked.png",
+        resource_path("image_resources/optionMode_Radio_Button_Images/strength/R_uncheckedBase.png"),
+        resource_path("image_resources/optionMode_Radio_Button_Images/strength/R_uncheckedOver.png"),
+        resource_path("image_resources/optionMode_Radio_Button_Images/strength/R_uncheckedDown.png"),
+        resource_path("image_resources/optionMode_Radio_Button_Images/strength/R_checked.png"),
     ],
     [
-        "image_resources/optionMode_Radio_Button_Images/resolution/R_uncheckedBase.png",
-        "image_resources/optionMode_Radio_Button_Images/resolution/R_uncheckedOver.png",
-        "image_resources/optionMode_Radio_Button_Images/resolution/R_uncheckedDown.png",
-        "image_resources/optionMode_Radio_Button_Images/resolution/R_checked.png",
+        resource_path("image_resources/optionMode_Radio_Button_Images/resolution/R_uncheckedBase.png"),
+        resource_path("image_resources/optionMode_Radio_Button_Images/resolution/R_uncheckedOver.png"),
+        resource_path("image_resources/optionMode_Radio_Button_Images/resolution/R_uncheckedDown.png"),
+        resource_path("image_resources/optionMode_Radio_Button_Images/resolution/R_checked.png"),
     ],
     [
-        "image_resources/optionMode_Radio_Button_Images/movement/R_uncheckedBase.png",
-        "image_resources/optionMode_Radio_Button_Images/movement/R_uncheckedOver.png",
-        "image_resources/optionMode_Radio_Button_Images/movement/R_uncheckedDown.png",
-        "image_resources/optionMode_Radio_Button_Images/movement/R_checked.png",
+        resource_path("image_resources/optionMode_Radio_Button_Images/movement/R_uncheckedBase.png"),
+        resource_path("image_resources/optionMode_Radio_Button_Images/movement/R_uncheckedOver.png"),
+        resource_path("image_resources/optionMode_Radio_Button_Images/movement/R_uncheckedDown.png"),
+        resource_path("image_resources/optionMode_Radio_Button_Images/movement/R_checked.png"),
     ],
     [
-        "image_resources/optionMode_Radio_Button_Images/supports/R_uncheckedBase.png",
-        "image_resources/optionMode_Radio_Button_Images/supports/R_uncheckedOver.png",
-        "image_resources/optionMode_Radio_Button_Images/supports/R_uncheckedDown.png",
-        "image_resources/optionMode_Radio_Button_Images/supports/R_checked.png",
+        resource_path("image_resources/optionMode_Radio_Button_Images/supports/R_uncheckedBase.png"),
+        resource_path("image_resources/optionMode_Radio_Button_Images/supports/R_uncheckedOver.png"),
+        resource_path("image_resources/optionMode_Radio_Button_Images/supports/R_uncheckedDown.png"),
+        resource_path("image_resources/optionMode_Radio_Button_Images/supports/R_checked.png"),
     ],
     [
-        "image_resources/optionMode_Radio_Button_Images/adhesion/R_uncheckedBase.png",
-        "image_resources/optionMode_Radio_Button_Images/adhesion/R_uncheckedOver.png",
-        "image_resources/optionMode_Radio_Button_Images/adhesion/R_uncheckedDown.png",
-        "image_resources/optionMode_Radio_Button_Images/adhesion/R_checked.png",
+        resource_path("image_resources/optionMode_Radio_Button_Images/adhesion/R_uncheckedBase.png"),
+        resource_path("image_resources/optionMode_Radio_Button_Images/adhesion/R_uncheckedOver.png"),
+        resource_path("image_resources/optionMode_Radio_Button_Images/adhesion/R_uncheckedDown.png"),
+        resource_path("image_resources/optionMode_Radio_Button_Images/adhesion/R_checked.png"),
     ],
 ]
 
 optionModeDefaultIndex = 0
 
 geometryActionBackground = (
-    "image_resources/geometryAction_Radio_Button_Images/background.png"
+    resource_path("image_resources/geometryAction_Radio_Button_Images/background.png")
 )
 geometryActionNames = ["Translate", "Rotate", "Scale"]
 geometryActionImages = [
     [
-        "image_resources/geometryAction_Radio_Button_Images/translate/R_uncheckedBase.png",
-        "image_resources/geometryAction_Radio_Button_Images/translate/R_uncheckedOver.png",
-        "image_resources/geometryAction_Radio_Button_Images/translate/R_uncheckedDown.png",
-        "image_resources/geometryAction_Radio_Button_Images/translate/R_checked.png",
+        resource_path("image_resources/geometryAction_Radio_Button_Images/translate/R_uncheckedBase.png"),
+        resource_path("image_resources/geometryAction_Radio_Button_Images/translate/R_uncheckedOver.png"),
+        resource_path("image_resources/geometryAction_Radio_Button_Images/translate/R_uncheckedDown.png"),
+        resource_path("image_resources/geometryAction_Radio_Button_Images/translate/R_checked.png"),
     ],
     [
-        "image_resources/geometryAction_Radio_Button_Images/rotate/R_uncheckedBase.png",
-        "image_resources/geometryAction_Radio_Button_Images/rotate/R_uncheckedOver.png",
-        "image_resources/geometryAction_Radio_Button_Images/rotate/R_uncheckedDown.png",
-        "image_resources/geometryAction_Radio_Button_Images/rotate/R_checked.png",
+        resource_path("image_resources/geometryAction_Radio_Button_Images/rotate/R_uncheckedBase.png"),
+        resource_path("image_resources/geometryAction_Radio_Button_Images/rotate/R_uncheckedOver.png"),
+        resource_path("image_resources/geometryAction_Radio_Button_Images/rotate/R_uncheckedDown.png"),
+        resource_path("image_resources/geometryAction_Radio_Button_Images/rotate/R_checked.png"),
     ],
     [
-        "image_resources/geometryAction_Radio_Button_Images/scale/R_uncheckedBase.png",
-        "image_resources/geometryAction_Radio_Button_Images/scale/R_uncheckedOver.png",
-        "image_resources/geometryAction_Radio_Button_Images/scale/R_uncheckedDown.png",
-        "image_resources/geometryAction_Radio_Button_Images/scale/R_checked.png",
+        resource_path("image_resources/geometryAction_Radio_Button_Images/scale/R_uncheckedBase.png"),
+        resource_path("image_resources/geometryAction_Radio_Button_Images/scale/R_uncheckedOver.png"),
+        resource_path("image_resources/geometryAction_Radio_Button_Images/scale/R_uncheckedDown.png"),
+        resource_path("image_resources/geometryAction_Radio_Button_Images/scale/R_checked.png"),
     ],
 ]
 geometryActionDefaultIndex = None
 # View Mode Radio Button Variables
-viewModeBackground = "image_resources/viewMode_Radio_Button_Images/background.png"
+viewModeBackground = resource_path("image_resources/viewMode_Radio_Button_Images/background.png")
 viewModeNames = ["Prepare", "Preview"]
 viewModeImages = [
     [
-        "image_resources/viewMode_Radio_Button_Images/prepare/R_uncheckedBase.png",
-        "image_resources/viewMode_Radio_Button_Images/prepare/R_uncheckedOver.png",
-        "image_resources/viewMode_Radio_Button_Images/prepare/R_uncheckedDown.png",
-        "image_resources/viewMode_Radio_Button_Images/prepare/R_checked.png",
+        resource_path("image_resources/viewMode_Radio_Button_Images/prepare/R_uncheckedBase.png"),
+        resource_path("image_resources/viewMode_Radio_Button_Images/prepare/R_uncheckedOver.png"),
+        resource_path("image_resources/viewMode_Radio_Button_Images/prepare/R_uncheckedDown.png"),
+        resource_path("image_resources/viewMode_Radio_Button_Images/prepare/R_checked.png"),
     ],
     [
-        "image_resources/viewMode_Radio_Button_Images/preview/R_uncheckedBase.png",
-        "image_resources/viewMode_Radio_Button_Images/preview/R_uncheckedOver.png",
-        "image_resources/viewMode_Radio_Button_Images/preview/R_uncheckedDown.png",
-        "image_resources/viewMode_Radio_Button_Images/preview/R_checked.png",
+        resource_path("image_resources/viewMode_Radio_Button_Images/preview/R_uncheckedBase.png"),
+        resource_path("image_resources/viewMode_Radio_Button_Images/preview/R_uncheckedOver.png"),
+        resource_path("image_resources/viewMode_Radio_Button_Images/preview/R_uncheckedDown.png"),
+        resource_path("image_resources/viewMode_Radio_Button_Images/preview/R_checked.png"),
     ],
 ]
 viewModeDefaultIndex = 0
@@ -1518,17 +1543,17 @@ r7c1MovementDeck.set_state("enabled")
 sliceButtonDeck = glooey.Deck(
     "B_slice",
     B_slice=Disableable_Unlabeled_Image_Button(
-        "image_resources/Slice_Button_Images/slice/base.png",
-        "image_resources/Slice_Button_Images/slice/over.png",
-        "image_resources/Slice_Button_Images/slice/down.png",
+        resource_path("image_resources/Slice_Button_Images/slice/base.png"),
+        resource_path("image_resources/Slice_Button_Images/slice/over.png"),
+        resource_path("image_resources/Slice_Button_Images/slice/down.png"),
         set_sliceFlag,
         [],
-        "image_resources/Slice_Button_Images/slice/disabled.png",
+        resource_path("image_resources/Slice_Button_Images/slice/disabled.png"),
     ),
     B_saveGcodeAs=Unlabeled_Image_Button(
-        "image_resources/Slice_Button_Images/saveGcodeAs/base.png",
-        "image_resources/Slice_Button_Images/saveGcodeAs/over.png",
-        "image_resources/Slice_Button_Images/saveGcodeAs/down.png",
+        resource_path("image_resources/Slice_Button_Images/saveGcodeAs/base.png"),
+        resource_path("image_resources/Slice_Button_Images/saveGcodeAs/over.png"),
+        resource_path("image_resources/Slice_Button_Images/saveGcodeAs/down.png"),
         save_gcode_as,
         [],
     ),
@@ -1536,7 +1561,7 @@ sliceButtonDeck = glooey.Deck(
 
 sliceButtonDeck.get_widget("B_slice").set_disabled(True) # Start out with the slice button disabled. Only enable it when there is something to slice
 # R0 C0
-I_logo = Custom_Image("image_resources/logo/logo.png")  # New
+I_logo = Custom_Image(resource_path("image_resources/logo/logo.png"))  # New
 R_viewMode = Radio_Buttons(
     "Horizontal",
     False,
@@ -1556,9 +1581,9 @@ R_viewMode.set_disabled(True) # Start out with this disabled so the user can't s
 
 # R1 C0
 B_selectFile = Unlabeled_Image_Button(
-    "image_resources/File_Button_Images/base.png",
-    "image_resources/File_Button_Images/over.png",
-    "image_resources/File_Button_Images/down.png",
+    resource_path("image_resources/File_Button_Images/base.png"),
+    resource_path("image_resources/File_Button_Images/over.png"),
+    resource_path("image_resources/File_Button_Images/down.png"),
     select_file,
     [],
 )
@@ -1590,21 +1615,21 @@ R_printMode = Radio_Buttons(
 )
 # Slicing Directions Box:
 I_startingBox = Custom_Image(
-    "image_resources/slicingDirectionBox_Images/startingBox/background.png"
+    resource_path("image_resources/slicingDirectionBox_Images/startingBox/background.png")
 )
 B_numSlicingDirections = Disableable_Unlabeled_Image_Button(
-    "image_resources/slicingDirectionBox_Images/startingBox/apply/base.png",
-    "image_resources/slicingDirectionBox_Images/startingBox/apply/over.png",
-    "image_resources/slicingDirectionBox_Images/startingBox/apply/down.png",
+    resource_path("image_resources/slicingDirectionBox_Images/startingBox/apply/base.png"),
+    resource_path("image_resources/slicingDirectionBox_Images/startingBox/apply/over.png"),
+    resource_path("image_resources/slicingDirectionBox_Images/startingBox/apply/down.png"),
     set_numSlicingDirections,
     [],
-    "image_resources/slicingDirectionBox_Images/startingBox/apply/disabled.png"
+    resource_path("image_resources/slicingDirectionBox_Images/startingBox/apply/disabled.png")
 )
 B_numSlicingDirections.set_disabled(True)
 B_numSlicingDirections.D_variables['applied'] = False
 
 I_slicingDirectionBox = Custom_Image(
-    "image_resources/slicingDirectionBox_Images/background.png"
+    resource_path("image_resources/slicingDirectionBox_Images/background.png")
 )
 
 S_numSlicingDirections = Spin_Box(
@@ -1615,23 +1640,23 @@ S_currentSlicingDirection = Spin_Box(
     40, "2", 2, int(numSlicingDirections) + 1, 1, "int", update_current_selection, ""
 )
 B_addNew = Unlabeled_Image_Button(
-    "image_resources/slicingDirectionBox_Images/addNew/base.png",
-    "image_resources/slicingDirectionBox_Images/addNew/over.png",
-    "image_resources/slicingDirectionBox_Images/addNew/down.png",
+    resource_path("image_resources/slicingDirectionBox_Images/addNew/base.png"),
+    resource_path("image_resources/slicingDirectionBox_Images/addNew/over.png"),
+    resource_path("image_resources/slicingDirectionBox_Images/addNew/down.png"),
     add_new_slicing_direction,
     [],
 )
 B_remove = Unlabeled_Image_Button(
-    "image_resources/slicingDirectionBox_Images/remove/base.png",
-    "image_resources/slicingDirectionBox_Images/remove/over.png",
-    "image_resources/slicingDirectionBox_Images/remove/down.png",
+    resource_path("image_resources/slicingDirectionBox_Images/remove/base.png"),
+    resource_path("image_resources/slicingDirectionBox_Images/remove/over.png"),
+    resource_path("image_resources/slicingDirectionBox_Images/remove/down.png"),
     remove_slicing_direction,
     [],
 )
 B_removeAll = Unlabeled_Image_Button(
-    "image_resources/slicingDirectionBox_Images/removeAll/base.png",
-    "image_resources/slicingDirectionBox_Images/removeAll/over.png",
-    "image_resources/slicingDirectionBox_Images/removeAll/down.png",
+    resource_path("image_resources/slicingDirectionBox_Images/removeAll/base.png"),
+    resource_path("image_resources/slicingDirectionBox_Images/removeAll/over.png"),
+    resource_path("image_resources/slicingDirectionBox_Images/removeAll/down.png"),
     remove_all_slicing_directions,
     [],
 )
@@ -1711,6 +1736,19 @@ R_optionMode.D_variables['directions'] = [[0.0, 0.0]]
 R_optionMode.D_variables['D_slicePlaneValidity'] = {'0': True}
 # R2 C0
 geometryActionPopUpBox = Custom_Image(
-    "image_resources/geometryActionPopUpBox_Images/background.png"
+    resource_path("image_resources/geometryActionPopUpBox_Images/background.png")
 )
 # R2 C1
+
+# 模块级别的初始化代码保护
+if __name__ == "__main__":
+    # 只在直接运行时显示信息，避免在exe中弹出窗口
+    try:
+        print("widget_functions.py 被直接运行")
+        print("这个模块通常被 slicer_main.py 导入使用")
+        print("如果需要测试，请运行 slicer_main.py")
+    except:
+        pass
+else:
+    # 当作为模块导入时，静默加载字体
+    load_fonts()

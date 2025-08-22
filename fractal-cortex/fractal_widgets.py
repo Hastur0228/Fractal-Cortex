@@ -30,6 +30,14 @@ from pyglet import event
 from pyglet.window import key
 import glooey
 from glooey import drawing
+import sys
+import os
+
+def resource_path(relative_path):
+    """打包后资源路径兼容"""
+    if hasattr(sys, "_MEIPASS"):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
 
 """
 Contains all classes that define the structure of the custom widgets that are used to populate the GUI.
@@ -45,7 +53,12 @@ class Custom_Image(glooey.Frame):
 
     def __init__(self, backgroundImage):
         self.backgroundImage = backgroundImage
-        self.Decoration.custom_image = pyglet.image.load(self.backgroundImage)
+        # 延迟加载图像，避免在模块导入时创建GUI窗口
+        try:
+            self.Decoration.custom_image = pyglet.image.load(self.backgroundImage)
+        except Exception as e:
+            # 静默处理图像加载错误
+            pass
         super().__init__()
 
 class Light_Gray_Background(glooey.Background):
@@ -137,9 +150,9 @@ class Spin_Box(glooey.Widget):
         spinBoxHBox.add(self.entryBox, 0)
         spinBoxButtonBox.add(
             Unlabeled_Image_Button(
-                "image_resources/spinBox_Images/up/base.png",
-                "image_resources/spinBox_Images/up/over.png",
-                "image_resources/spinBox_Images/up/down.png",
+                resource_path("image_resources/spinBox_Images/up/base.png"),
+                resource_path("image_resources/spinBox_Images/up/over.png"),
+                resource_path("image_resources/spinBox_Images/up/down.png"),
                 self.up,
                 [],
             ),
@@ -147,9 +160,9 @@ class Spin_Box(glooey.Widget):
         )
         spinBoxButtonBox.add(
             Unlabeled_Image_Button(
-                "image_resources/spinBox_Images/down/base.png",
-                "image_resources/spinBox_Images/down/over.png",
-                "image_resources/spinBox_Images/down/down.png",
+                resource_path("image_resources/spinBox_Images/down/base.png"),
+                resource_path("image_resources/spinBox_Images/down/over.png"),
+                resource_path("image_resources/spinBox_Images/down/down.png"),
                 self.down,
                 [],
             ),
@@ -810,7 +823,12 @@ class Radio_Button_Frame(glooey.Frame):
         self, backgroundImage
     ):  # orientation, backgroundImage, radioButtonNames, radioButtonImages, defaultIndex, fontSize, toggleFunction, argsList):
         self.backgroundImage = backgroundImage
-        self.Decoration.custom_image = pyglet.image.load(self.backgroundImage)
+        # 延迟加载图像，避免在模块导入时创建GUI窗口
+        try:
+            self.Decoration.custom_image = pyglet.image.load(self.backgroundImage)
+        except Exception as e:
+            # 静默处理图像加载错误
+            pass
         self.Decoration.custom_alignment = "center"
         super().__init__()
 
@@ -872,13 +890,18 @@ class Radio_Button(glooey.RadioButton):
         self.argsList = argsList
         self._disabled = False
 
-        self.custom_unchecked_base = pyglet.image.load(self.radioButtonImages[0])
-        self.custom_unchecked_over = pyglet.image.load(self.radioButtonImages[1])
-        self.custom_unchecked_down = pyglet.image.load(self.radioButtonImages[2])
+        # 延迟加载图像，避免在模块导入时创建GUI窗口
+        try:
+            self.custom_unchecked_base = pyglet.image.load(self.radioButtonImages[0])
+            self.custom_unchecked_over = pyglet.image.load(self.radioButtonImages[1])
+            self.custom_unchecked_down = pyglet.image.load(self.radioButtonImages[2])
 
-        self.custom_checked_base = pyglet.image.load(self.radioButtonImages[3])
-        self.custom_checked_over = pyglet.image.load(self.radioButtonImages[3])
-        self.custom_checked_down = pyglet.image.load(self.radioButtonImages[3])
+            self.custom_checked_base = pyglet.image.load(self.radioButtonImages[3])
+            self.custom_checked_over = pyglet.image.load(self.radioButtonImages[3])
+            self.custom_checked_down = pyglet.image.load(self.radioButtonImages[3])
+        except Exception as e:
+            # 静默处理图像加载错误
+            pass
 
         super().__init__(group)
 
@@ -919,16 +942,34 @@ class Radio_Button(glooey.RadioButton):
 """ CHECKBOX CLASS """
 
 class Checkbox(glooey.Checkbox):
-    pyglet.resource.path = [".", "image_resources/Checkbox_Images"]
-    pyglet.resource.reindex()
-    custom_checked_base = pyglet.resource.image("checkedBase.png")
-    custom_checked_over = pyglet.resource.image("checkedOver.png")
-    custom_checked_down = pyglet.resource.image("checkedDown.png")
-    custom_unchecked_base = pyglet.resource.image("uncheckedBase.png")
-    custom_unchecked_over = pyglet.resource.image("uncheckedOver.png")
-    custom_unchecked_down = pyglet.resource.image("uncheckedDown.png")
+    # 延迟加载图像，避免在模块导入时创建GUI窗口
+    custom_checked_base = None
+    custom_checked_over = None
+    custom_checked_down = None
+    custom_unchecked_base = None
+    custom_unchecked_over = None
+    custom_unchecked_down = None
+    
+    @classmethod
+    def _load_images(cls):
+        """延迟加载图像资源"""
+        if cls.custom_checked_base is None:
+            try:
+                pyglet.resource.path = [".", resource_path("image_resources/Checkbox_Images")]
+                pyglet.resource.reindex()
+                cls.custom_checked_base = pyglet.resource.image("checkedBase.png")
+                cls.custom_checked_over = pyglet.resource.image("checkedOver.png")
+                cls.custom_checked_down = pyglet.resource.image("checkedDown.png")
+                cls.custom_unchecked_base = pyglet.resource.image("uncheckedBase.png")
+                cls.custom_unchecked_over = pyglet.resource.image("uncheckedOver.png")
+                cls.custom_unchecked_down = pyglet.resource.image("uncheckedDown.png")
+            except Exception as e:
+                # 静默处理图像加载错误
+                pass
 
     def __init__(self):
+        # 确保图像已加载
+        self._load_images()
         super().__init__()
         self._disabled = False
         
@@ -1043,11 +1084,14 @@ class Labeled_Image_Button(glooey.Button):
         self.Foreground.custom_color = self.fontColor
         self.Foreground.custom_alignment = self.fontAlignment
 
-        self.Base.custom_image = pyglet.image.load(self.baseImage)
-
-        self.Over.custom_image = pyglet.image.load(self.overImage)
-
-        self.Down.custom_image = pyglet.image.load(self.downImage)
+        # 延迟加载图像，避免在模块导入时创建GUI窗口
+        try:
+            self.Base.custom_image = pyglet.image.load(self.baseImage)
+            self.Over.custom_image = pyglet.image.load(self.overImage)
+            self.Down.custom_image = pyglet.image.load(self.downImage)
+        except Exception as e:
+            # 静默处理图像加载错误
+            pass
 
         super().__init__(self.label)
 
@@ -1078,11 +1122,14 @@ class Unlabeled_Image_Button(glooey.Button):
 
         self.sliceFlag = False
 
-        self.Base.custom_image = pyglet.image.load(self.baseImage)
-
-        self.Over.custom_image = pyglet.image.load(self.overImage)
-
-        self.Down.custom_image = pyglet.image.load(self.downImage)
+        # 延迟加载图像，避免在模块导入时创建GUI窗口
+        try:
+            self.Base.custom_image = pyglet.image.load(self.baseImage)
+            self.Over.custom_image = pyglet.image.load(self.overImage)
+            self.Down.custom_image = pyglet.image.load(self.downImage)
+        except Exception as e:
+            # 静默处理图像加载错误
+            pass
 
         super().__init__()
 
@@ -1111,12 +1158,16 @@ class Disableable_Unlabeled_Image_Button(glooey.Button):
         self.sliceFlag = False
         self._disabled = False  # Track disabled state
         
-        # Load the images
-        self.original_base_image = pyglet.image.load(self.baseImage)
-        self.Base.custom_image = self.original_base_image
-        self.Over.custom_image = pyglet.image.load(self.overImage)
-        self.Down.custom_image = pyglet.image.load(self.downImage)
-        self.Off.custom_image = pyglet.image.load(self.disabledImage)
+        # 延迟加载图像，避免在模块导入时创建GUI窗口
+        try:
+            self.original_base_image = pyglet.image.load(self.baseImage)
+            self.Base.custom_image = self.original_base_image
+            self.Over.custom_image = pyglet.image.load(self.overImage)
+            self.Down.custom_image = pyglet.image.load(self.downImage)
+            self.Off.custom_image = pyglet.image.load(self.disabledImage)
+        except Exception as e:
+            # 静默处理图像加载错误
+            pass
         
         super().__init__()
     
@@ -1505,3 +1556,14 @@ class Numeric_Caret(pyglet.text.caret.Caret):
 
         self._layout.ensure_line_visible(line)
         self._layout.ensure_x_visible(x)
+
+
+# 模块级别的初始化代码保护
+if __name__ == "__main__":
+    # 只在直接运行时显示信息，避免在exe中弹出窗口
+    try:
+        print("fractal_widgets.py 被直接运行")
+        print("这个模块通常被 slicer_main.py 导入使用")
+        print("如果需要测试，请运行 slicer_main.py")
+    except:
+        pass

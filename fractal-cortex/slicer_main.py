@@ -40,6 +40,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import threading
 import queue
 from concurrent.futures import ThreadPoolExecutor
+from multiprocessing import freeze_support
 import pyglet
 from pyglet.gl import *
 from pyglet.window import mouse
@@ -1644,4 +1645,5 @@ def main():
 
 
 if __name__ == "__main__":
+    freeze_support()  # 必须在Windows打包exe时添加，用于支持multiprocessing
     main()  # Call the main function

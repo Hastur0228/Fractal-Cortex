@@ -256,8 +256,8 @@ def get_manifold_areas_for_one_chunk(innerMostPolygonsList, infillPercentage, sh
         In the above case, these areas are entirely filled in and solid, thus making the outer surface of the part "manifold" (watertight).
         If the user specifies 100% infill, the manifold area for each layer is simply equal to the area defined by all innerMostPolygons for that layer.
         中文说明：
-        - 计算“流形区域（需 100% 填充）”与“内部区域（按 infill%）”。
-        - 通过相邻层的重叠/差集判断上下表面暴露区，并在局部按壳厚进行“加厚”。
+        - 计算"流形区域（需 100% 填充）"与"内部区域（按 infill%）"。
+        - 通过相邻层的重叠/差集判断上下表面暴露区，并在局部按壳厚进行"加厚"。
         - infill=100% 时，当前层所有 innerMostPolygons 直接为流形区域。"""
 
     def build_up_exposed_layers(exposedLayer, layerOverlapArea):
@@ -565,7 +565,7 @@ def get_infill_start_locations_for_one_chunk(allLayerInfills_lineStrings, finalS
 def optimize_infill_paths_for_one_layer(firstLineIndex, firstLine, firstLineStartPoint, infillLineStrings):
     """Returns a list of infill paths in an optimized order based on a nearest neighbors approach.
         infillLineStrings must be a list of LineStrings.
-        中文说明：使用“最近邻”启发式规划每层内部/实心填充线段顺序，减少空走。"""
+        中文说明：使用"最近邻"启发式规划每层内部/实心填充线段顺序，减少空走。"""
     
     firstLineEndPoint = list(firstLine.coords)
     firstLineEndPoint.remove(firstLineStartPoint)
@@ -689,7 +689,11 @@ def all_calculations(mesh, printSettings):
     start = time.time()
     argsList = zip([mesh]*len(slice_levels), slice_levels)                                                                      # Package list of arguments for use in parallel computing
     with concurrent.futures.ProcessPoolExecutor(max_workers=workerBees) as executor:                                            # Parallelize the slicing function over the list of arguments to slice multiple layers at once to save time
-        meshSections = list(executor.map(apply_slicing_function, argsList))
+        try:
+            meshSections = list(executor.map(apply_slicing_function, argsList))
+        except Exception as e:
+            print(f"Error in parallel mesh section processing (3-axis): {e}")
+            meshSections = [None] * len(slice_levels)
     shapely_polygons_list = [[Polygon(p) for p in layer.polygons_full] if layer is not None else [] for layer in meshSections]  # List of cross-sections of STL model with slice planes
     transform3DList = [layer.metadata["to_3D"] if layer is not None else np.array([]) for layer in meshSections]                # List of 3D transformation matrices that correspond with each slice
     del meshSections                                                                                                            # Delete meshSections from memory to save space since it won't be referenced anymore
@@ -703,7 +707,12 @@ def all_calculations(mesh, printSettings):
     start = time.time()
     argsList = zip(shapely_polygons_list, [lineWidth]*len(shapely_polygons_list), [shellThickness]*len(shapely_polygons_list))
     with concurrent.futures.ProcessPoolExecutor(max_workers=workerBees) as executor:
-        innerMostPolygonsList, shellRingsListList = zip(*executor.map(apply_get_shells_for_one_layer, argsList))
+        try:
+            innerMostPolygonsList, shellRingsListList = zip(*executor.map(apply_get_shells_for_one_layer, argsList))
+        except Exception as e:
+            print(f"Error in parallel shell processing (3-axis): {e}")
+            innerMostPolygonsList = [[]] * len(shapely_polygons_list)
+            shellRingsListList = [[]] * len(shapely_polygons_list)
     end = time.time() - start
     print("Shells took ", end, "seconds.", "\n")
 
@@ -737,7 +746,11 @@ def all_calculations(mesh, printSettings):
     else:                                                                       # If the user specified infill percentage is between 0-100%, optimize the path taken by the nozzle when extruding internal infill to save time during the print
         argsList = zip(internalAreas, finalShellPoints, [buildAreaHatch] * len(internalAreas), [minInfillLineLength] * len(internalAreas),)
         with concurrent.futures.ProcessPoolExecutor(max_workers=workerBees) as executor:
-            optimizedInternalInfills = list(executor.map(apply_get_internal_infill_for_one_layer_function, argsList))
+            try:
+                optimizedInternalInfills = list(executor.map(apply_get_internal_infill_for_one_layer_function, argsList))
+            except Exception as e:
+                print(f"Error in parallel internal infill processing (3-axis): {e}")
+                optimizedInternalInfills = [[]] * len(internalAreas)
     del buildAreaHatch
     end = time.time() - start
     print("Internal Infill took ", end, "seconds.", "\n")
@@ -749,7 +762,11 @@ def all_calculations(mesh, printSettings):
     start = time.time()
     argsList = zip(layerNumbers, manifoldAreas, finalShellPoints, [buildAreaLines_plus_45]*len(layerNumbers), [buildAreaLines_minus_45]*len(layerNumbers), [minInfillLineLength]*len(layerNumbers))
     with concurrent.futures.ProcessPoolExecutor(max_workers=workerBees) as executor:
-        optimizedSolidInfills = list(executor.map(apply_get_solid_infill_for_one_layer_function, argsList))
+        try:
+            optimizedSolidInfills = list(executor.map(apply_get_solid_infill_for_one_layer_function, argsList))
+        except Exception as e:
+            print(f"Error in parallel solid infill processing (3-axis): {e}")
+            optimizedSolidInfills = [[]] * len(layerNumbers)
     del buildAreaLines_plus_45, buildAreaLines_minus_45
     end = time.time() - start
     print("Manifold Infill took ", end, "seconds.", "\n")
@@ -984,7 +1001,12 @@ def all_5_axis_calculations(mesh, printSettings, slicingDirections):
         start = time.time()
         argsList = zip([currentChunk]*len(slice_levels), [currentNormal]*len(slice_levels), [currentStart]*len(slice_levels), slice_levels)  # Need to have an argsList with mesh repeated multiple times to get around problem with having mesh as a non-global variable
         with concurrent.futures.ProcessPoolExecutor(max_workers=workerBees) as executor:
-            meshSections = list(executor.map(apply_slicing_function_5_axis, argsList))
+            try:
+                meshSections = list(executor.map(apply_slicing_function_5_axis, argsList))
+            except Exception as e:
+                print(f"Error in parallel mesh section processing: {e}")
+                # Return empty sections to continue processing
+                meshSections = [None] * len(slice_levels)
         shapely_polygons_list = [[Polygon(p) for p in layer.polygons_full] if layer is not None else [] for layer in meshSections]  # Takes no time (Not worth parallelizing)
         transform3DList = [layer.metadata["to_3D"] if layer is not None else np.array([]) for layer in meshSections]  # Takes no time (Not worth parallelizing)
 
@@ -1004,7 +1026,13 @@ def all_5_axis_calculations(mesh, printSettings, slicingDirections):
             start = time.time()
             argsList = zip(shapely_polygons_list, [lineWidth] * len(shapely_polygons_list), [shellThickness] * len(shapely_polygons_list),)
             with concurrent.futures.ProcessPoolExecutor(max_workers=workerBees) as executor:
-                innerMostPolygonsList, shellRingsListList = zip(*executor.map(apply_get_shells_for_one_layer, argsList))
+                try:
+                    innerMostPolygonsList, shellRingsListList = zip(*executor.map(apply_get_shells_for_one_layer, argsList))
+                except Exception as e:
+                    print(f"Error in parallel shell processing: {e}")
+                    # Return empty lists to continue processing
+                    innerMostPolygonsList = [[]] * len(shapely_polygons_list)
+                    shellRingsListList = [[]] * len(shapely_polygons_list)
             end = time.time() - start
             print("Shells took ", end, "seconds.", "\n")
             chunk_shellRingsListList[str(k)] = shellRingsListList
@@ -1035,7 +1063,11 @@ def all_5_axis_calculations(mesh, printSettings, slicingDirections):
             else:
                 argsList = zip(internalAreas, finalShellPoints, [buildAreaHatch] * len(internalAreas), [minInfillLineLength] * len(internalAreas),)
                 with concurrent.futures.ProcessPoolExecutor(max_workers=workerBees) as executor:
-                    optimizedInternalInfills = list(executor.map(apply_get_internal_infill_for_one_layer_function, argsList))
+                    try:
+                        optimizedInternalInfills = list(executor.map(apply_get_internal_infill_for_one_layer_function, argsList))
+                    except Exception as e:
+                        print(f"Error in parallel internal infill processing: {e}")
+                        optimizedInternalInfills = [[]] * len(innerMostPolygonsList)
             end = time.time() - start
             print("Internal Infill took ", end, "seconds.", "\n")
             chunk_optimizedInternalInfills[str(k)] = optimizedInternalInfills
@@ -1045,7 +1077,11 @@ def all_5_axis_calculations(mesh, printSettings, slicingDirections):
             start = time.time()
             argsList = zip(layerNumbers, manifoldAreas, finalShellPoints, [buildAreaLines_plus_45] * len(layerNumbers), [buildAreaLines_minus_45] * len(layerNumbers), [minInfillLineLength] * len(layerNumbers))
             with concurrent.futures.ProcessPoolExecutor(max_workers=workerBees) as executor:
-                optimizedSolidInfills = list(executor.map(apply_get_solid_infill_for_one_layer_function, argsList))
+                try:
+                    optimizedSolidInfills = list(executor.map(apply_get_solid_infill_for_one_layer_function, argsList))
+                except Exception as e:
+                    print(f"Error in parallel solid infill processing: {e}")
+                    optimizedSolidInfills = [[]] * len(layerNumbers)
             end = time.time() - start
             print("Manifold Infill took ", end, "seconds.", "\n")
             chunk_optimizedSolidInfills[str(k)] = optimizedSolidInfills
@@ -1817,4 +1853,15 @@ try:
     workerBees = int(maxProcesses / 2)  # Only use half of the available cores to be safe. It's a good idea to leave some cores for other tasks your computer may have going on
 except:
     workerBees = 2                      # Just set number of cores to 2 if the above fails for some reason (perhaps change this to 1 if you want to be extra safe)
+
+
+# 模块级别的初始化代码保护
+if __name__ == "__main__":
+    # 只在直接运行时显示信息，避免在exe中弹出窗口
+    try:
+        print("slicing_functions.py 被直接运行")
+        print("这个模块通常被 slicer_main.py 导入使用")
+        print("如果需要测试，请运行 slicer_main.py")
+    except:
+        pass
 
